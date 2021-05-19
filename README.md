@@ -1,0 +1,2 @@
+# kubernetes-edgenode
+edge reporter 
