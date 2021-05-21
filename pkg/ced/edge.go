@@ -29,12 +29,13 @@ func (p EdgeWatch) DoAdded(obj map[string]interface{}) {
 	fmt.Println("Edge connected...")
 }
 func (p EdgeWatch) DoModified(obj map[string]interface{}) {
+
 	jsonObj, _ := p.CloudHubClient.GetResource("Node", "", p.RegisterName)
 	dataObj := jsonObj.Object
 	dataObj["status"] = obj["status"]
 	data, _ := json.Marshal(dataObj)
 	p.CloudHubClient.UpdateResourceStatus(string(data))
-	fmt.Println("Update edge status...")
+	fmt.Println("Updated edge status...")
 }
 func (p EdgeWatch) DoDeleted(obj map[string]interface{}) {
 	fmt.Println("Edge disconnected...")
@@ -63,9 +64,16 @@ func (hub *CEDHub) Report() {
 			NewEdgeWatch(hub.CloudHubClient, hub.RegisterName)))
 
 	for {
-		jsonObj, _ := hub.EdgeHubClient.GetResource("Node", "", hub.RealName)
-
+		targetObj,  _ := hub.EdgeHubClient.GetResource("Node", "", hub.RealName)
+		mappingObj, _ := hub.CloudHubClient.GetResource("Node", "", hub.RegisterName)
+		mappingObj.Object["status"] = targetObj.Object["status"]
+		data, _ := json.Marshal(mappingObj.Object)
+		_, err = hub.CloudHubClient.UpdateResourceStatus(string(data))
+		fmt.Println(err)
+		fmt.Println(string(data))
+		fmt.Println("Updated...")
 		time.Sleep(20 * time.Second)
 	}
+
 }
 
