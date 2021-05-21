@@ -53,26 +53,36 @@ func (hub *CEDHub) Report() {
 		}
 
 		cloudNode := make(map[string]interface{})
+		cloudNode["apiVersion"] = "v1"
+		cloudNode["kind"] = "Node"
+
+		labelNode := make(map[string]string)
+		labelNode["node-role.kubernetes.io/edge-hub"] = ""
+		labelNode["node-role.kubernetes.io/worker"] = ""
+		metaNode := make(map[string]interface{})
+		metaNode["name"] = hub.RegisterName
+		metaNode["labels"] = labelNode
+		cloudNode["metadata"] = metaNode
+
 		cloudNode["spec"] = edgeNode.Object["spec"]
 
 		specBytes, _ := json.Marshal(cloudNode)
+		fmt.Println(string(specBytes))
 		hub.CloudHubClient.CreateResource(string(specBytes))
 	}
 
-	go hub.EdgeHubClient.WatchResource("Node", "", hub.RealName,
-		kubesys.NewKubernetesWatcher(hub.EdgeHubClient,
-			NewEdgeWatch(hub.CloudHubClient, hub.RegisterName)))
+	//go hub.EdgeHubClient.WatchResource("Node", "", hub.RealName,
+	//	kubesys.NewKubernetesWatcher(hub.EdgeHubClient,
+	//		NewEdgeWatch(hub.CloudHubClient, hub.RegisterName)))
 
 	for {
 		targetObj,  _ := hub.EdgeHubClient.GetResource("Node", "", hub.RealName)
 		mappingObj, _ := hub.CloudHubClient.GetResource("Node", "", hub.RegisterName)
 		mappingObj.Object["status"] = targetObj.Object["status"]
 		data, _ := json.Marshal(mappingObj.Object)
-		_, err = hub.CloudHubClient.UpdateResourceStatus(string(data))
-		fmt.Println(err)
-		fmt.Println(string(data))
-		fmt.Println("Updated...")
-		time.Sleep(20 * time.Second)
+		hub.CloudHubClient.UpdateResourceStatus(string(data))
+		fmt.Println("Updated edge status...")
+		time.Sleep(5 * time.Second)
 	}
 
 }

@@ -32,6 +32,6 @@ func NewCEDHub(edgeName string, masterName string, cloudUrl string, cloudToken s
 }
 
 func GetNodeJSON (name string) string {
-	str := "{\"apiVersion\": \"v1\",\"kind\": \"Node\",\"metadata\": {\"name\": \"#NAME\",\"namespace\": \"default\"}}"
+	str := "{\"apiVersion\": \"v1\", \"kind\": \"Node\", \"metadata\": { \"name\": \"#NAME\", \"labels\": {\"node-role.kubernetes.io/edge-hub\": \"\"}}}"
 	return strings.Replace(str, "#NAME", name, -1)
 }
