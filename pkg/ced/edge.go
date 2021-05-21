@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/kubesys/kubernetes-client-go/pkg/kubesys"
+	"time"
 )
 
 /*
@@ -25,20 +26,18 @@ func NewEdgeWatch(cloudHubClient *kubesys.KubernetesClient, registerName string)
 }
 
 func (p EdgeWatch) DoAdded(obj map[string]interface{}) {
-	fmt.Println("Edge Connected...")
+	fmt.Println("Edge connected...")
 }
 func (p EdgeWatch) DoModified(obj map[string]interface{}) {
-	fmt.Println("Updated...")
 	jsonObj, _ := p.CloudHubClient.GetResource("Node", "", p.RegisterName)
 	dataObj := jsonObj.Object
-	dataObj["spec"] = obj["spec"]
 	dataObj["status"] = obj["status"]
 	data, _ := json.Marshal(dataObj)
-	p.CloudHubClient.UpdateResource(string(data))
-	fmt.Println(data)
+	p.CloudHubClient.UpdateResourceStatus(string(data))
+	fmt.Println("Update edge status...")
 }
 func (p EdgeWatch) DoDeleted(obj map[string]interface{}) {
-	fmt.Println("Edge Disconnected...")
+	fmt.Println("Edge disconnected...")
 }
 
 func (hub *CEDHub) Report() {
@@ -55,12 +54,18 @@ func (hub *CEDHub) Report() {
 		cloudNode := make(map[string]interface{})
 		cloudNode["spec"] = edgeNode.Object["spec"]
 
-		jsonBytes , _ := json.Marshal(cloudNode)
-		hub.CloudHubClient.CreateResource(string(jsonBytes))
+		specBytes, _ := json.Marshal(cloudNode)
+		hub.CloudHubClient.CreateResource(string(specBytes))
 	}
 
-	hub.EdgeHubClient.WatchResource("Node", "", hub.RealName,
+	go hub.EdgeHubClient.WatchResource("Node", "", hub.RealName,
 		kubesys.NewKubernetesWatcher(hub.EdgeHubClient,
 			NewEdgeWatch(hub.CloudHubClient, hub.RegisterName)))
+
+	for {
+		jsonObj, _ := hub.EdgeHubClient.GetResource("Node", "", hub.RealName)
+
+		time.Sleep(20 * time.Second)
+	}
 }
 
