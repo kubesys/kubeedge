@@ -14,10 +14,11 @@ import (
 type CEDHub struct {
 	CloudHubClient *kubesys.KubernetesClient
 	EdgeHubClient  *kubesys.KubernetesClient
-	Name           string
+	RegisterName   string
+	RealName       string
 }
 
-func NewCEDHub(edgeName string, cloudUrl string, cloudToken string, edgeUrl string, edgeToken string) *CEDHub {
+func NewCEDHub(edgeName string, masterName string, cloudUrl string, cloudToken string, edgeUrl string, edgeToken string) *CEDHub {
 	cloudHub := kubesys.NewKubernetesClient(cloudUrl, cloudToken)
 	cloudHub.Init()
 	edgeHub  := kubesys.NewKubernetesClient(edgeUrl, edgeToken)
@@ -25,7 +26,8 @@ func NewCEDHub(edgeName string, cloudUrl string, cloudToken string, edgeUrl stri
 	hub := new(CEDHub)
 	hub.CloudHubClient = cloudHub
 	hub.EdgeHubClient = edgeHub
-	hub.Name = edgeName
+	hub.RegisterName = edgeName
+	hub.RealName = masterName
 	return hub
 }
 

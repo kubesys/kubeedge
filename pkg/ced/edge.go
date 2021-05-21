@@ -14,37 +14,53 @@ import (
 
 type EdgeWatch struct {
 	CloudHubClient *kubesys.KubernetesClient
+	RegisterName   string
 }
 
-func NewEdgeWatch(cloudHubClient *kubesys.KubernetesClient) *EdgeWatch {
+func NewEdgeWatch(cloudHubClient *kubesys.KubernetesClient, registerName string) *EdgeWatch {
 	edgeWatch := new(EdgeWatch)
 	edgeWatch.CloudHubClient = cloudHubClient
+	edgeWatch.RegisterName = registerName
 	return edgeWatch
 }
 
 func (p EdgeWatch) DoAdded(obj map[string]interface{}) {
-	fmt.Println("add Node")
+	fmt.Println("Edge Connected...")
 }
 func (p EdgeWatch) DoModified(obj map[string]interface{}) {
-	data, _ := json.Marshal(obj)
+	fmt.Println("Updated...")
+	jsonObj, _ := p.CloudHubClient.GetResource("Node", "", p.RegisterName)
+	dataObj := jsonObj.Object
+	dataObj["spec"] = obj["spec"]
+	dataObj["status"] = obj["status"]
+	data, _ := json.Marshal(dataObj)
 	p.CloudHubClient.UpdateResource(string(data))
-	fmt.Println("update Node")
+	fmt.Println(data)
 }
 func (p EdgeWatch) DoDeleted(obj map[string]interface{}) {
-	fmt.Println("delete Node")
+	fmt.Println("Edge Disconnected...")
 }
 
 func (hub *CEDHub) Report() {
 
-	_, err := hub.CloudHubClient.GetResource("Node", "", hub.Name)
+	_, err := hub.CloudHubClient.GetResource("Node", "", hub.RegisterName)
 
 	if err != nil {
-		node := GetNodeJSON(hub.Name)
-		fmt.Println(node)
-		hub.CloudHubClient.CreateResource(node)
+		edgeNode, err := hub.EdgeHubClient.GetResource("Node", "", hub.RealName)
+		if err != nil {
+			fmt.Println("Wrong edge realname, please login in edge and execute 'kubectl get no'")
+			return
+		}
+
+		cloudNode := make(map[string]interface{})
+		cloudNode["spec"] = edgeNode.Object["spec"]
+
+		jsonBytes , _ := json.Marshal(cloudNode)
+		hub.CloudHubClient.CreateResource(string(jsonBytes))
 	}
 
-	hub.EdgeHubClient.WatchResource("Node", "", hub.Name,
-		kubesys.NewKubernetesWatcher(hub.EdgeHubClient, NewEdgeWatch(hub.CloudHubClient)))
+	hub.EdgeHubClient.WatchResource("Node", "", hub.RealName,
+		kubesys.NewKubernetesWatcher(hub.EdgeHubClient,
+			NewEdgeWatch(hub.CloudHubClient, hub.RegisterName)))
 }
 
